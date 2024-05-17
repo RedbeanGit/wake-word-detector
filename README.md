@@ -1,6 +1,6 @@
 # Wake word detector
 
-This is a simple wake word detector that uses the [OpenWakeWord library](https://github.com/dscripka/openWakeWord)
+This is a simple wake word detector that uses the [OpenWakeWord library](https://github.com/dscripka/openWakeWord) with audio streaming support
 
 ## Requirements
 
