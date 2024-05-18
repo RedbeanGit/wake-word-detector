@@ -1,5 +1,6 @@
 import logging
 import time
+import openwakeword  # type: ignore
 
 from openwakeword.model import Model  # type: ignore
 from wakeworddetector.engine import WakeWordDetectorEngine
@@ -8,9 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     logging.info("Loading model...")
+    openwakeword.utils.download_models()  # type: ignore
     model = Model(
         wakeword_models=["models/dis-cyril.tflite"],
     )

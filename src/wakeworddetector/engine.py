@@ -2,16 +2,17 @@
 Provides a WakeWordDetectorEngine class that can be run to start streaming audio from a microphone and detect wake words.
 """
 
+import logging
+import numpy as np
 import pyaudio
 import typing
-import logging
 import threading
 
 from openwakeword.model import Model  # type: ignore
 
 logger = logging.getLogger(__name__)
 
-CHUNK = 1024
+CHUNK = 16000
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
@@ -35,6 +36,7 @@ class WakeWordDetectorEngine:
         on_detection_callback: typing.Callable[
             [], None
         ] = default_on_detection_callback,
+        precision: float = 0.05,
     ):
         """
         Initialize the engine with the given wake word models.
@@ -46,6 +48,7 @@ class WakeWordDetectorEngine:
         logger.info("Initializing Wake Word Detector Engine...")
         self._model = model
         self._on_detection_callback = on_detection_callback
+        self._precision = precision
         self._pyaudio_instance = pyaudio.PyAudio()
 
         self._running = False
@@ -69,7 +72,7 @@ class WakeWordDetectorEngine:
 
     def run(self, stream: pyaudio.Stream):
         while self._running:
-            chunk = stream.read(CHUNK)
+            chunk = np.frombuffer(stream.read(CHUNK), dtype=np.int16)
             self.process(chunk)
 
         stream.stop_stream()
@@ -83,10 +86,11 @@ class WakeWordDetectorEngine:
             self._thread.join()
         logger.info("Wake Word Detector Engine stopped.")
 
-    def process(self, audio_stream: bytes):
-        for frame in audio_stream:
-            prediction: bool = self.model.predict(frame)  # type: ignore
-            logger.debug(f"Prediction: {prediction}")
+    def process(self, frame: typing.Iterable[np.ndarray[np.int16, typing.Any]]):
+        prediction: dict[str, float] = self._model.predict(frame)  # type: ignore
+        logger.debug(f"Prediction: {prediction}")
 
-            if prediction:
+        for label, confidence in prediction.items():
+            if confidence >= self._precision:
+                logger.info(f"Detected wake word: {label}")
                 self._on_detection_callback()
